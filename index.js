@@ -7,17 +7,20 @@ var root = require('root')
 var minimist = require('minimist')
 
 var argv = minimist(process.argv, {
-  alias: {p:'port', q:'quiet'},
+  alias: {p:'port', q:'quiet', v:'version'},
   booleans: ['quiet']
 })
+
+if (argv.version) return console.error(require('./package').version)
 
 var playlist = argv._[2]
 
 if (!playlist) {
   console.error(
     'Usage: hms-decryptor playlist_url [options]\n\n'+
-    '  --port,-p   set the port. defaults to 9999\n'+
-    '  --quiet,-q  do not print any logs\n\n'
+    '  --port,    -p    set the port. defaults to 9999\n'+
+    '  --version, -v    print the version\n'+
+    '  --quiet,   -q    do not print any logs\n'
   )
   process.exit(1)
 }
