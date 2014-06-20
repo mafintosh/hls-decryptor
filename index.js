@@ -87,6 +87,8 @@ app.get('/', function(req, res) {
   })
 })
 
+app.get('/index.m3u8', '/')
+
 app.get('/ts', function(req, res) {
   delete req.headers.host
 
@@ -116,5 +118,5 @@ app.get('/ts', function(req, res) {
 })
 
 app.listen(argv.port || 9999, function(addr) {
-  console.log('Listening on http://'+addr)
+  console.log('Listening on http://'+addr+'/index.m3u8')
 })
