@@ -1,0 +1,25 @@
+{
+  "name": "hls-decryptor",
+  "description": "hls proxy that will decrypt segment files of another hls playlist",
+  "version": "0.0.0",
+  "repository": "mafintosh/hls-decryptor",
+  "dependencies": {
+    "minimist": "^0.2.0",
+    "request": "^2.36.0",
+    "root": "^0.7.1"
+  },
+  "bin": {
+    "hls-decryptor": "index.js"
+  },
+  "keywords": [
+    "http",
+    "live",
+    "streaming",
+    "stream",
+    "proxy",
+    "decrypt",
+    "hls",
+    "raspberry",
+    "pi"
+  ]
+}
