@@ -89,6 +89,20 @@ app.get('/', function(req, res) {
 
 app.get('/index.m3u8', '/')
 
+var prevUrl
+var prevKey
+var getKey = function(url, headers, cb) {
+  if (url == prevUrl) return cb(null, prevKey)
+
+  log('key  : '+url)
+  request(url, {headers:headers, encoding:null}, function(err, response) {
+    if (err) return cb(err)
+    prevKey = response.body
+    prevUrl = url;
+    cb(null, response.body)
+  })
+}
+
 app.get('/ts', function(req, res) {
   delete req.headers.host
 
@@ -100,12 +114,9 @@ app.get('/ts', function(req, res) {
     if (!req.query.key) return respond(response, res, response.body)
 
     var ku = url.resolve(playlist, req.query.key)
-    log('key  : '+ku)
-
-    request(ku, {headers:req.headers, encoding:null}, function(err, keyResponse) {
+    getKey(ku, req.headers, function(err, key) {
       if (err) return res.error(err)
 
-      var key = keyResponse.body
       var iv = new Buffer(req.query.iv, 'hex')
       log('iv   : 0x'+req.query.iv)
 
