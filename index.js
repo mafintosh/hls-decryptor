@@ -37,6 +37,21 @@ var respond = function(proxy, res, body) {
   res.end(body)
 }
 
+var requestRetry = function(u, opts, cb) {
+  var tries = 10
+  var action = function() {
+    request(u, opts, function(err, res) {
+      if (err) {
+        if (tries-- > 0) return setTimeout(action, 2000)
+        return cb(err)
+      }
+      cb(err, res)
+    })
+  }
+
+  action()
+}
+
 var encIV = function(seq) {
   var buf = new Buffer(16)
   buf.fill(0)
@@ -52,7 +67,7 @@ app.get('/', function(req, res) {
   delete req.headers.host
 
   log('m3u8 : '+playlist)
-  request(playlist, {headers:req.headers}, function(err, response) {
+  requestRetry(playlist, {headers:req.headers}, function(err, response) {
     if (err) return res.error(err)
 
     var body = response.body.trim().split('\n')
@@ -95,7 +110,7 @@ var getKey = function(url, headers, cb) {
   if (url == prevUrl) return cb(null, prevKey)
 
   log('key  : '+url)
-  request(url, {headers:headers, encoding:null}, function(err, response) {
+  requestRetry(url, {headers:headers, encoding:null}, function(err, response) {
     if (err) return cb(err)
     prevKey = response.body
     prevUrl = url;
@@ -109,7 +124,7 @@ app.get('/ts', function(req, res) {
   var u = url.resolve(playlist, req.query.url)
   log('ts   : '+u)
 
-  request(u, {headers:req.headers, encoding:null}, function(err, response) {
+  requestRetry(u, {headers:req.headers, encoding:null}, function(err, response) {
     if (err) return res.error(err)
     if (!req.query.key) return respond(response, res, response.body)
 
