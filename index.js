@@ -27,10 +27,14 @@ if (!playlist) {
 
 var app = root()
 
+request = request.defaults({timeout:15000, agent:false})
+
 var respond = function(proxy, res, body) {
   delete proxy.headers['content-length']
   delete proxy.headers['transfer-encoding']
   delete proxy.headers['content-md5']
+  delete proxy.headers['connection']
+
   proxy.headers['content-length'] = body.length
 
   res.writeHead(proxy.statusCode, proxy.headers)
