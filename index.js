@@ -42,7 +42,7 @@ var requestRetry = function(u, opts, cb) {
   var action = function() {
     request(u, opts, function(err, res) {
       if (err) {
-        if (tries-- > 0) return setTimeout(action, 2000)
+        if (tries-- > 0) return setTimeout(action, 1000)
         return cb(err)
       }
       cb(err, res)
