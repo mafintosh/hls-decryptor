@@ -7,7 +7,7 @@ var root = require('root')
 var minimist = require('minimist')
 
 var argv = minimist(process.argv, {
-  alias: {p:'port', q:'quiet', v:'version'},
+  alias: {p:'port', q:'quiet', v:'version', r:'redirect'},
   booleans: ['quiet']
 })
 
@@ -18,17 +18,19 @@ var playlist = argv._[2]
 if (!playlist) {
   console.error(
     'Usage: hms-decryptor playlist_url [options]\n\n'+
-    '  --port,    -p    set the port. defaults to 9999\n'+
-    '  --version, -v    print the version\n'+
-    '  --quiet,   -q    do not print any logs\n'
+    '  --port,     -p    set the port. defaults to 9999\n'+
+    '  --version,  -v    print the version\n'+
+    '  --quiet,    -q    do not print any logs\n'+
+    '  --redirect, -r    redirect after initial request to this url\n'
   )
   process.exit(1)
 }
 
 var app = root()
 
-request = request.defaults({timeout:15000, agent:false})
+request = request.defaults({timeout:15000, agent:false, jar: request.jar()})
 
+var redirect = argv.redirect
 var respond = function(proxy, res, body) {
   delete proxy.headers['content-length']
   delete proxy.headers['transfer-encoding']
@@ -71,38 +73,50 @@ app.get('/', function(req, res) {
   delete req.headers.host
 
   log('m3u8 : '+playlist)
-  requestRetry(playlist, {headers:req.headers}, function(err, response) {
-    if (err) return res.error(err)
 
-    var body = response.body.trim().split('\n')
-    var key
-    var iv
-    var seq = 0
+  var req = function () {
+    requestRetry(playlist, function(err, response) {
+      if (err) return res.error(err)
 
-    body = body
-      .map(function(line) {
-        if (line.indexOf('#EXT-X-MEDIA-SEQUENCE') === 0) {
-          seq = parseInt(line.split(':').pop(), 10)
+      var body = response.body.trim().split('\n')
+      var key
+      var iv
+      var seq = 0
+
+      body = body
+        .map(function(line) {
+          if (line.indexOf('#EXT-X-MEDIA-SEQUENCE') === 0) {
+            seq = parseInt(line.split(':').pop(), 10)
+            return line
+          }
+
+          if (line.indexOf('#EXT-X-KEY:METHOD=AES-128') === 0) {
+            var parsed = line.match(/URI="([^"]+)"(?:,IV=(.+))?$/)
+            key = parsed[1]
+            if (parsed[2]) iv = parsed[2].slice(2).toLowerCase()
+            return null
+          }
+
+          if (line[0] === '#') return line
+
+          return '/ts?url='+encodeURIComponent(line.trim())+'&key='+encodeURIComponent(key || '')+'&iv='+encodeURIComponent(iv || encIV(seq++))
+        })
+        .filter(function(line) {
           return line
-        }
+        })
+        .join('\n')+'\n'
 
-        if (line.indexOf('#EXT-X-KEY:METHOD=AES-128') === 0) {
-          var parsed = line.match(/URI="([^"]+)"(?:,IV=(.+))?$/)
-          key = parsed[1]
-          if (parsed[2]) iv = parsed[2].slice(2).toLowerCase()
-          return null
-        }
+      respond(response, res, new Buffer(body))
+    })
+  }
 
-        if (line[0] === '#') return line
+  if (!redirect) return req()
 
-        return '/ts?url='+encodeURIComponent(line)+'&key='+encodeURIComponent(key || '')+'&iv='+encodeURIComponent(iv || encIV(seq++))
-      })
-      .filter(function(line) {
-        return line
-      })
-      .join('\n')+'\n'
-
-    respond(response, res, new Buffer(body))
+  requestRetry(playlist, function(err, res) {
+    if (err) return res.error(err)
+    if (redirect) playlist = url.resolve(playlist, redirect)
+    redirect = false
+    req()
   })
 })
 
@@ -128,7 +142,7 @@ app.get('/ts', function(req, res) {
   var u = url.resolve(playlist, req.query.url)
   log('ts   : '+u)
 
-  requestRetry(u, {headers:req.headers, encoding:null}, function(err, response) {
+  requestRetry(u, { encoding:null}, function(err, response) {
     if (err) return res.error(err)
     if (!req.query.key) return respond(response, res, response.body)
 
