@@ -1,7 +1,7 @@
 {
   "name": "hls-decryptor",
   "description": "hls proxy that will decrypt segment files of another hls playlist",
-  "version": "1.1.4",
+  "version": "1.2.0",
   "repository": "mafintosh/hls-decryptor",
   "dependencies": {
     "minimist": "^0.2.0",
